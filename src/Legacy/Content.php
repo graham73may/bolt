@@ -13,6 +13,7 @@ use Silex;
  */
 class Content implements \ArrayAccess
 {
+    use Entity\ContentHierarchicalTrait;
     use Entity\ContentRelationTrait;
     use Entity\ContentRouteTrait;
     use Entity\ContentSearchTrait;

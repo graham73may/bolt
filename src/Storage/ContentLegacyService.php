@@ -11,6 +11,7 @@ use Silex\Application;
  */
 class ContentLegacyService
 {
+    use Entity\ContentHierarchicalTrait;
     use Entity\ContentRelationTrait;
     use Entity\ContentRouteTrait;
     use Entity\ContentSearchTrait;

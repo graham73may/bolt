@@ -10,6 +10,7 @@ use Bolt\Helpers\Input;
 use Bolt\Legacy\Content;
 use Bolt\Response\TemplateResponse;
 use Bolt\Translation\Translator as Trans;
+use Bolt\Storage\Entity\ContentHierarchicalTrait;
 use Silex\ControllerCollection;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -146,10 +147,15 @@ class Frontend extends ConfigurableBase
             $slug = $request->get('id');
         }
 
-        $slug = $this->app['slugify']->slugify($slug);
+        // Is this a hierarchical contentType?
+        if (isset($contenttype['hierarchical']) && $contenttype['hierarchical'] === true) {
+            $content = $this->getHierarchicalContent($contenttype['slug'], $slug, true);
+        } else {
+            $slug = $this->app['slugify']->slugify($slug);
 
-        // First, try to get it by slug.
-        $content = $this->getContent($contenttype['slug'], ['slug' => $slug, 'returnsingle' => true, 'log_not_found' => !is_numeric($slug)]);
+            // First, try to get it by slug.
+            $content = $this->getContent($contenttype['slug'], ['slug' => $slug, 'returnsingle'  => true, 'log_not_found' => !is_numeric($slug)]);
+        }
 
         if (!$content && is_numeric($slug)) {
             // And otherwise try getting it by ID
@@ -158,7 +164,7 @@ class Frontend extends ConfigurableBase
 
         // No content, no page!
         if (!$content) {
-            $this->abort(Response::HTTP_NOT_FOUND, "Page $contenttypeslug/$slug not found.");
+            $this->abort(Response::HTTP_NOT_FOUND, $contenttype['name'] . " $slug not found.");
 
             return null;
         }
