@@ -30,9 +30,16 @@ pages:
         body:
             type: html
             height: 300px
+        parent:
+            type: select
+            ## SBTODO: parentselect as a new core field type?
+            sort: parent
+            values: page/title
         template:
             type: templateselect
             filter: '*.twig'
+    hierarchical: true
+    #hierarchical_prefix: 'pages/'
     taxonomy: [ groups ]
     recordsperpage: 100
 

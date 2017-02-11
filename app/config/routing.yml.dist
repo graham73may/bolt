@@ -43,6 +43,14 @@ taxonomylink:
     requirements:
         taxonomytype: controller.requirement:anyTaxonomyType
 
+pagelink:
+    path: /{slug}
+    defaults:
+        contenttypeslug: page
+    contenttype: pages
+    requirements:
+        slug: '[a-z0-9-_\/]+'
+
 contentlisting:
     path: /{contenttypeslug}
     defaults:
