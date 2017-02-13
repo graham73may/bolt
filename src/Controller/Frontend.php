@@ -27,6 +27,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class Frontend extends ConfigurableBase
 {
+    use ContentHierarchicalTrait;
+
     protected function getConfigurationRoutes()
     {
         return $this->app['config']->get('routing', []);

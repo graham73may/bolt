@@ -10,7 +10,6 @@ use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Backend controller for record manipulation routes.
- *
  * Prior to v3.0 this functionality primarily existed in the monolithic
  * Bolt\Controllers\Backend class.
  *
@@ -18,21 +17,23 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class Records extends BackendBase
 {
+
     protected function addRoutes(ControllerCollection $c)
     {
+
         $c->method('GET|POST');
 
         $c->match('/editcontent/{contenttypeslug}/{id}', 'edit')
-            ->bind('editcontent')
-            ->assert('id', '\d*')
-            ->value('id', '');
+          ->bind('editcontent')
+          ->assert('id', '\d*')
+          ->value('id', '');
 
         $c->get('/overview/{contenttypeslug}', 'overview')
-            ->bind('overview');
+          ->bind('overview');
 
         $c->get('/relatedto/{contenttypeslug}/{id}', 'related')
-            ->bind('relatedto')
-            ->assert('id', '\d*');
+          ->bind('relatedto')
+          ->assert('id', '\d*');
     }
 
     /**
@@ -46,6 +47,7 @@ class Records extends BackendBase
      */
     public function edit(Request $request, $contenttypeslug, $id)
     {
+
         // Is the record new or existing
         $new = empty($id);
 
@@ -60,33 +62,60 @@ class Records extends BackendBase
         // Get the ContentType object
         $contenttype = $this->getContentType($contenttypeslug);
 
+        // SBTODO: Remove var hierarchies and create a new parentselect field type
+        // SBTODO: Move parent-change.js functionality into Bolt core's JS
+//        if (array_key_exists('hierarchical', $contenttype) && $contenttype['hierarchical'] === true) {
+//            $file = (new JavaScript('/custom-assets/js/parent-change.js'))->setZone(Zone::BACKEND)
+//                                                                          ->setLate(true);
+//            $this->app['asset.queue.file']->add($file);
+//
+//            $snippet = (new Snippet())->setCallback('<script>var hierarchies = JSON.parse(\'' . json_encode($this->getAllHierarchies($contenttypeslug, false),
+//                    JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) . '\');</script>')
+//                                      ->setZone(Zone::BACKEND)
+//                                      ->setLocation(Target::BEFORE_HEAD_JS);
+//
+//            $this->app['asset.queue.snippet']->add($snippet);
+//        }
+//
+//        $cacheKey = '_hierarchies_' . $contenttypeslug;
+//
+//        if ($request->query->has('returnto') && $this->app['cache']->contains($cacheKey)) {
+//            $this->app['cache']->delete($cacheKey);
+//        }
+
         // Save the POSTed record
         if ($request->isMethod('POST')) {
             $this->validateCsrfToken();
 
-            $formValues = $request->request->all();
-            $returnTo = $request->get('returnto');
+            $formValues   = $request->request->all();
+            $returnTo     = $request->get('returnto');
             $editReferrer = $request->get('editreferrer');
 
-            return $this->recordSave()->action($formValues, $contenttype, $id, $new, $returnTo, $editReferrer);
+            return $this->recordSave()
+                        ->action($formValues, $contenttype, $id, $new, $returnTo, $editReferrer);
         }
 
         try {
             // Get the record
             $repo = $this->getRepository($contenttypeslug);
         } catch (InvalidRepositoryException $e) {
-            $this->flashes()->error(Trans::__('contenttypes.generic.not-existing', ['%contenttype%' => $contenttypeslug]));
+            $this->flashes()
+                 ->error(Trans::__('contenttypes.generic.not-existing', ['%contenttype%' => $contenttypeslug]));
 
             return $this->redirectToRoute('dashboard');
         }
 
         if ($new) {
-            $content = $repo->create(['contenttype' => $contenttypeslug, 'status' => $contenttype['default_status']]);
+            $content = $repo->create([
+                'contenttype' => $contenttypeslug,
+                'status'      => $contenttype['default_status']
+            ]);
         } else {
             $content = $repo->find($id);
             if ($content === false) {
                 // Record not found, advise and redirect to the dashboard
-                $this->flashes()->error(Trans::__('contenttypes.generic.not-existing', ['%contenttype%' => $contenttypeslug]));
+                $this->flashes()
+                     ->error(Trans::__('contenttypes.generic.not-existing', ['%contenttype%' => $contenttypeslug]));
 
                 return $this->redirectToRoute('dashboard');
             }
@@ -94,7 +123,8 @@ class Records extends BackendBase
 
         // We're doing a GET
         $duplicate = $request->query->get('duplicate', false);
-        $context = $this->recordEdit()->action($content, $content->getContenttype(), $duplicate);
+        $context   = $this->recordEdit()
+                          ->action($content, $content->getContenttype(), $duplicate);
 
         return $this->render('@bolt/editcontent/editcontent.twig', $context);
     }
@@ -109,10 +139,12 @@ class Records extends BackendBase
      */
     public function overview(Request $request, $contenttypeslug)
     {
+
         // Make sure the user is allowed to see this page, based on 'allowed contenttypes'
         // for Editors.
         if (!$this->isAllowed('contenttype:' . $contenttypeslug)) {
-            $this->flashes()->error(Trans::__('general.phrase.access-denied-privilege-view-page'));
+            $this->flashes()
+                 ->error(Trans::__('general.phrase.access-denied-privilege-view-page'));
 
             return $this->redirectToRoute('dashboard');
         }
@@ -124,18 +156,18 @@ class Records extends BackendBase
             }
         }
 
-        $options = (new ListingOptions())
-            ->setOrder($request->query->get('order'))
-            ->setPage($request->query->get('page_' . $contenttypeslug))
-            ->setFilter($request->query->get('filter'))
-            ->setTaxonomies($taxonomy)
-        ;
+        $options = (new ListingOptions())->setOrder($request->query->get('order'))
+                                         ->setPage($request->query->get('page_' . $contenttypeslug))
+                                         ->setFilter($request->query->get('filter'))
+                                         ->setTaxonomies($taxonomy);
 
         $context = [
             'contenttype'     => $this->getContentType($contenttypeslug),
-            'multiplecontent' => $this->recordListing()->action($contenttypeslug, $options),
+            'multiplecontent' => $this->recordListing()
+                                      ->action($contenttypeslug, $options),
             'filter'          => array_merge((array) $taxonomy, (array) $options->getFilter()),
-            'permissions'     => $this->getContentTypeUserPermissions($contenttypeslug, $this->users()->getCurrentUser()),
+            'permissions'     => $this->getContentTypeUserPermissions($contenttypeslug, $this->users()
+                                                                                             ->getCurrentUser()),
         ];
 
         return $this->render('@bolt/overview/overview.twig', $context);
@@ -152,20 +184,22 @@ class Records extends BackendBase
      */
     public function related(Request $request, $contenttypeslug, $id)
     {
+
         // Make sure the user is allowed to see this page, based on 'allowed contenttypes' for Editors.
         if (!$this->isAllowed('contenttype:' . $contenttypeslug)) {
-            $this->flashes()->error(Trans::__('general.phrase.access-denied-privilege-edit-record'));
+            $this->flashes()
+                 ->error(Trans::__('general.phrase.access-denied-privilege-edit-record'));
 
             return $this->redirectToRoute('dashboard');
         }
 
         // Get content record, and the contenttype config from $contenttypeslug
-        $content = $this->getContent($contenttypeslug, ['id' => $id]);
+        $content     = $this->getContent($contenttypeslug, ['id' => $id]);
         $contenttype = $this->getContentType($contenttypeslug);
 
         // Get relations
         $showContentType = null;
-        $relations = null;
+        $relations       = null;
         if (isset($contenttype['relations'])) {
             $relations = $contenttype['relations'];
 
@@ -199,7 +233,8 @@ class Records extends BackendBase
             'relations'        => $relations,
             'show_contenttype' => $showContentType,
             'related_content'  => is_null($relations) ? null : $content->related($showContentType['slug']),
-            'permissions'      => $this->getContentTypeUserPermissions($contenttypeslug, $this->users()->getCurrentUser()),
+            'permissions'      => $this->getContentTypeUserPermissions($contenttypeslug, $this->users()
+                                                                                              ->getCurrentUser()),
         ];
 
         return $this->render('@bolt/relatedto/relatedto.twig', $context);
@@ -215,6 +250,7 @@ class Records extends BackendBase
      */
     private function checkEditAccess($contenttypeslug, $id)
     {
+
         // Is the record new or existing
         $new = empty($id) ?: false;
 
@@ -229,7 +265,8 @@ class Records extends BackendBase
         $perm = $new ? "contenttype:$contenttypeslug:create" : "contenttype:$contenttypeslug:edit:$id";
         if (!$this->isAllowed($perm)) {
             $action = $new ? 'create' : 'edit';
-            $this->flashes()->error(Trans::__("You do not have the right privileges to $action that record."));
+            $this->flashes()
+                 ->error(Trans::__("You do not have the right privileges to $action that record."));
 
             return $this->redirectToRoute('dashboard');
         }
@@ -246,6 +283,7 @@ class Records extends BackendBase
      */
     private function setEditReferrer(Request $request)
     {
+
         $tmp = parse_url($request->server->get('HTTP_REFERER'));
 
         $tmpreferrer = $tmp['path'];
@@ -263,6 +301,7 @@ class Records extends BackendBase
      */
     protected function recordEdit()
     {
+
         return $this->app['storage.request.edit'];
     }
 
@@ -271,6 +310,7 @@ class Records extends BackendBase
      */
     protected function recordListing()
     {
+
         return $this->app['storage.request.listing'];
     }
 
@@ -279,6 +319,7 @@ class Records extends BackendBase
      */
     protected function recordSave()
     {
+
         return $this->app['storage.request.save'];
     }
 }

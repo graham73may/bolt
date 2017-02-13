@@ -8,13 +8,11 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
  * Trait class for ContentType routing.
- *
  * This is a breakout of the old Bolt\Content class and serves two main purposes:
  *   * Maintain backward compatibility for Bolt\Content through the remainder of
  *     the 2.x development/release life-cycle
  *   * Attempt to break up former functionality into sections of code that more
  *     resembles Single Responsibility Principles
- *
  * These traits should be considered transitional, the functionality in the
  * process of refactor, and not representative of a valid approach.
  *
@@ -22,6 +20,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  */
 trait ContentRouteTrait
 {
+
     /**
      * Creates a link to EDIT this record, if the user is logged in.
      *
@@ -29,10 +28,14 @@ trait ContentRouteTrait
      */
     public function editlink()
     {
+
         $perm = 'contenttype:' . $this->contenttype['slug'] . ':edit:' . $this->id;
 
         if ($this->app['users']->isAllowed($perm)) {
-            return $this->app->generatePath('editcontent', ['contenttypeslug' => $this->contenttype['slug'], 'id' => $this->id ]);
+            return $this->app->generatePath('editcontent', [
+                'contenttypeslug' => $this->contenttype['slug'],
+                'id'              => $this->id
+            ]);
         } else {
             return false;
         }
@@ -47,6 +50,23 @@ trait ContentRouteTrait
      */
     public function link($referenceType = UrlGeneratorInterface::ABSOLUTE_PATH)
     {
+
+        // SBTODO: Link has changed completely
+        //        $contentType = $this->contenttype;
+        //
+        //        if (array_key_exists('hierarchical', $contentType) && $contentType['hierarchical'] === true) {
+        //            $new_link = $this->getHierarchicalPath($contentType['slug'], $this->get('id'));
+        //            $replace  = '/' . $this->get('slug');
+        //
+        //            if (strpos($new_link, '/' . $contentType['slug']) !== false) {
+        //                $replace = '/' . $contentType['singular_slug'] . $replace;
+        //            }
+        //
+        //            return str_replace($replace, $new_link, $link);
+        //        }
+        //
+        //        return $link;
+
         list($name, $params) = $this->getRouteNameAndParams();
         /** @var UrlGeneratorInterface $urlGenerator */
         $urlGenerator = $this->app['url_generator'];
@@ -61,10 +81,11 @@ trait ContentRouteTrait
      */
     public function isHome()
     {
-        $config = $this->app['config'];
+
+        $config   = $this->app['config'];
         $homepage = $config->get('theme/homepage') ?: $config->get('general/homepage');
-        $uriID = $this->contenttype['singular_slug'] . '/' . $this->get('id');
-        $uriSlug = $this->contenttype['singular_slug'] . '/' . $this->get('slug');
+        $uriID    = $this->contenttype['singular_slug'] . '/' . $this->get('id');
+        $uriSlug  = $this->contenttype['singular_slug'] . '/' . $this->get('slug');
 
         return $uriID === $homepage || $uriSlug === $homepage;
     }
@@ -76,6 +97,7 @@ trait ContentRouteTrait
      */
     public function getRouteNameAndParams()
     {
+
         if (empty($this->app)) {
             $this->app = ResourceManager::getApp();
         }
@@ -95,18 +117,12 @@ trait ContentRouteTrait
             return null;
         }
 
-        $slug = $this->getLinkSlug();
-        $availableParams = array_filter(
-            array_merge(
-                $config['defaults'] ?: [],
-                $this->getRouteRequirementParams($config),
-                [
-                    'contenttypeslug' => $this->contenttype['singular_slug'],
-                    'id'              => $this->id,
-                    'slug'            => $slug,
-                ]
-            )
-        );
+        $slug            = $this->getLinkSlug();
+        $availableParams = array_filter(array_merge($config['defaults'] ?: [], $this->getRouteRequirementParams($config), [
+            'contenttypeslug' => $this->contenttype['singular_slug'],
+            'id'              => $this->id,
+            'slug'            => $slug,
+        ]));
 
         /** @var Route|null $route */
         $route = $this->app['routes']->get($name);
@@ -115,14 +131,18 @@ trait ContentRouteTrait
         }
 
         // Needed params as array keys
-        $pathVars = $route->compile()->getPathVariables();
+        $pathVars   = $route->compile()
+                            ->getPathVariables();
         $neededKeys = array_flip($pathVars);
 
         // Set the values of neededKeys from the availableParams.
         // This removes extra parameters that are not needed for url generation.
         $params = array_replace($neededKeys, array_intersect_key($availableParams, $neededKeys));
 
-        return [$name, $params];
+        return [
+            $name,
+            $params
+        ];
     }
 
     /**
@@ -133,18 +153,25 @@ trait ContentRouteTrait
      */
     protected function getRouteConfig()
     {
+
         $allroutes = $this->app['config']->get('routing');
 
         // First, try to find a custom route that's applicable
         foreach ($allroutes as $binding => $config) {
             if ($this->isApplicableRoute($config)) {
-                return [$binding, $config];
+                return [
+                    $binding,
+                    $config
+                ];
             }
         }
 
         // Just return the 'generic' contentlink route.
         if (!empty($allroutes['contentlink'])) {
-            return ['contentlink', $allroutes['contentlink']];
+            return [
+                'contentlink',
+                $allroutes['contentlink']
+            ];
         }
 
         return null;
@@ -159,22 +186,29 @@ trait ContentRouteTrait
      */
     protected function getRouteRequirementParams(array $route)
     {
+
         $params = [];
         if (isset($route['requirements'])) {
             foreach ($route['requirements'] as $fieldName => $requirement) {
                 if ('\d{4}-\d{2}-\d{2}' === $requirement) {
                     // Special case, if we need to have a date
                     $params[$fieldName] = substr($this->get($fieldName), 0, 10);
-                } elseif ($this->getTaxonomy() !== null && !$this->getTaxonomy()->getField($fieldName)->isEmpty()) {
+                } elseif ($this->getTaxonomy() !== null && !$this->getTaxonomy()
+                                                                 ->getField($fieldName)
+                                                                 ->isEmpty()
+                ) {
                     // This is for new storage handling of taxonomies in
                     // contentroutes. If in legacy it will fall back to the one
                     // below.
-                    $params[$fieldName] = $this->getTaxonomy()->getField($fieldName)->first()->getSlug();
+                    $params[$fieldName] = $this->getTaxonomy()
+                                               ->getField($fieldName)
+                                               ->first()
+                                               ->getSlug();
                 } elseif (isset($this->taxonomy[$fieldName])) {
                     // Turn something like '/groups/meta' to 'meta'. This is
                     // only for legacy storage.
-                    $tempKeys = array_keys($this->taxonomy[$fieldName]);
-                    $tempValues = explode('/', array_shift($tempKeys));
+                    $tempKeys           = array_keys($this->taxonomy[$fieldName]);
+                    $tempValues         = explode('/', array_shift($tempKeys));
                     $params[$fieldName] = array_pop($tempValues);
                 } elseif ($this->get($fieldName)) {
                     $params[$fieldName] = $this->get($fieldName);
@@ -197,9 +231,8 @@ trait ContentRouteTrait
      */
     protected function isApplicableRoute(array $route)
     {
-        return (isset($route['contenttype']) && $route['contenttype'] === $this->contenttype['singular_slug'])
-            || (isset($route['contenttype']) && $route['contenttype'] === $this->contenttype['slug'])
-            || (isset($route['recordslug']) && $route['recordslug'] === $this->getReference());
+
+        return (isset($route['contenttype']) && $route['contenttype'] === $this->contenttype['singular_slug']) || (isset($route['contenttype']) && $route['contenttype'] === $this->contenttype['slug']) || (isset($route['recordslug']) && $route['recordslug'] === $this->getReference());
     }
 
     /**
@@ -209,6 +242,7 @@ trait ContentRouteTrait
      */
     protected function getReference()
     {
+
         $reference = $this->contenttype['singular_slug'] . '/' . $this->getLinkSlug();
 
         return $reference;
@@ -221,6 +255,7 @@ trait ContentRouteTrait
      */
     private function getLinkSlug()
     {
+
         if ($this instanceof Content) {
             return $this->slug ?: $this->id;
         }
