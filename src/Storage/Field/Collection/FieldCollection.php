@@ -113,7 +113,13 @@ class FieldCollection extends AbstractLazyCollection
 
             foreach ((array) $instances as $val) {
                 $fieldtype = $val->getFieldtype();
+                $contenttype = $val->getContenttype();
+                $columnName = $val->getName();
+                $fieldName = $val->getFieldname();
+                $metadata = $this->em->getMapper()->getFieldMetadata($contenttype, $columnName, $fieldName);
+
                 $field = $this->em->getFieldManager()->getFieldFor($fieldtype);
+                $field->mapping = $metadata;
                 $type = $field->getStorageType();
                 $typeCol = 'value_' . $type->getName();
 
