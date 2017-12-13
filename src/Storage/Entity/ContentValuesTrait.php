@@ -270,6 +270,12 @@ trait ContentValuesTrait
             $newFieldType = $this->app['storage.field_manager']->getFieldFor($this->contenttype['fields'][$key]['type']);
             $newFieldType->mapping['fieldname'] = $key;
             $entity = new Content();
+
+            // SBTODO: Added mapping to fields on contenttypes
+            $fieldMapping          = $this->app['storage']->getMapper()
+                                                          ->getFieldMetadata($this->contenttype['tablename'], $key);
+            $newFieldType->mapping = $fieldMapping;
+
             $newFieldType->hydrate([$key => $value], $entity);
             $value = $entity->$key;
         }
